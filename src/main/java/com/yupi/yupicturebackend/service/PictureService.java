@@ -9,7 +9,6 @@ import com.yupi.yupicturebackend.model.dto.picture.PictureUploadRequest;
 import com.yupi.yupicturebackend.model.entity.Picture;
 import com.yupi.yupicturebackend.model.entity.User;
 import com.yupi.yupicturebackend.model.vo.PictureVO;
-import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.HttpServletRequest;
 
@@ -23,12 +22,12 @@ public interface PictureService extends IService<Picture> {
     /**
      * 上传图片
      *
-     * @param multipartFile
+     * @param inputSource
      * @param pictureUploadRequest
      * @param loginUser
      * @return
      */
-    PictureVO uploadPicture(MultipartFile multipartFile,
+    PictureVO uploadPicture(Object inputSource,
                             PictureUploadRequest pictureUploadRequest,
                             User loginUser);
 
