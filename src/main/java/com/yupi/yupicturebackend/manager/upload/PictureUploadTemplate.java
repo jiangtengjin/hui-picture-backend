@@ -63,8 +63,14 @@ public abstract class PictureUploadTemplate {
             List<CIObject> objectList = processResults.getObjectList();
             if (CollUtil.isNotEmpty(objectList)) {
                 CIObject compressCiObject = objectList.get(0);
+                // 缩略图默认等于压缩图
+                CIObject thumbnailCiObject = compressCiObject;
+                // 有缩略图才得到缩略图
+                if (objectList.size() > 1) {
+                    thumbnailCiObject = objectList.get(1);
+                }
                 // 封装压缩图返回结果
-                return buildResult(originalFilename, compressCiObject);
+                return buildResult(originalFilename, compressCiObject, thumbnailCiObject);
             }
             // 5、封装返回结果
             return buildResult(uploadPath, file, originalFilename, imageInfo);
@@ -108,9 +114,17 @@ public abstract class PictureUploadTemplate {
     }
 
     /**
-     * 封装返回结果
+     *  封装返回结果
+     *
+     * @param originalFilename 原图片名称
+     * @param compressCiObject 压缩图处理对象
+     * @param thumbnailCiObject 缩略图处理对象
+     * @return 处理结果
      */
-    private UploadPictureResult buildResult(String originalFilename, CIObject compressCiObject) {
+    private UploadPictureResult buildResult(
+            String originalFilename,
+            CIObject compressCiObject,
+            CIObject thumbnailCiObject) {
         UploadPictureResult uploadPictureResult = new UploadPictureResult();
         String format = compressCiObject.getFormat();
         int picWidth = compressCiObject.getWidth();
@@ -118,6 +132,7 @@ public abstract class PictureUploadTemplate {
         // 计算图片宽高比
         double picScale = NumberUtil.round(picWidth * 1.0 / picHeight, 2).doubleValue();
         uploadPictureResult.setUrl(cosClientConfig.getHost() + "/" + compressCiObject.getKey());
+        uploadPictureResult.setThumbnailUrl(cosClientConfig.getHost() + "/" + thumbnailCiObject.getKey());
         uploadPictureResult.setPicName(FileUtil.mainName(originalFilename));
         uploadPictureResult.setPicSize(compressCiObject.getSize().longValue());
         uploadPictureResult.setPicWidth(picWidth);

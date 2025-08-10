@@ -70,6 +70,15 @@ public class CosManager {
         compressRule.setBucket(cosClientConfig.getBucket());
         compressRule.setFileId(webpKey);
         rules.add(compressRule);
+        // 缩略图处理，仅对 2kb的图片生成缩略图
+        if (file.length() > 2 * 1024) {
+            PicOperations.Rule thumbnailRole = new PicOperations.Rule();
+            thumbnailRole.setRule(String.format("imageMogr2/thumbnail/%sx%s>", 256, 256));
+            thumbnailRole.setBucket(cosClientConfig.getBucket());
+            String thumbnailKey = FileUtil.mainName(file) + "_thumbnail." + FileUtil.getSuffix(key);
+            thumbnailRole.setFileId(thumbnailKey);
+            rules.add(thumbnailRole);
+        }
         // 构造处理参数
         picOperations.setRules(rules);
         putObjectRequest.setPicOperations(picOperations);
