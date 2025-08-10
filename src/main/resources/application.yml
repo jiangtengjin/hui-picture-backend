@@ -11,7 +11,13 @@ spring:
     username: root
     password: 123
     driver-class-name: com.mysql.cj.jdbc.Driver
-#  最大文件上传大小
+  # Redis 配置
+  redis:
+    database: 0
+    host: 192.168.179.127
+    port: 6379
+    timeout: 5000
+  #  最大文件上传大小
   servlet:
     multipart:
       max-file-size: 10MB
