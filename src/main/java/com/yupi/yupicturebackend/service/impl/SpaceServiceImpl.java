@@ -6,10 +6,18 @@ import com.yupi.yupicturebackend.exception.BusinessException;
 import com.yupi.yupicturebackend.exception.ErrorCode;
 import com.yupi.yupicturebackend.exception.ThrowUtils;
 import com.yupi.yupicturebackend.mapper.SpaceMapper;
+import com.yupi.yupicturebackend.model.dto.space.SpaceAddRequest;
 import com.yupi.yupicturebackend.model.entity.Space;
+import com.yupi.yupicturebackend.model.entity.User;
 import com.yupi.yupicturebackend.model.enums.SpaceLevelEnum;
 import com.yupi.yupicturebackend.service.SpaceService;
+import com.yupi.yupicturebackend.service.UserService;
+import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.support.TransactionTemplate;
+
+import javax.annotation.Resource;
+import java.util.Optional;
 
 /**
 * @author 机hui难得
@@ -19,6 +27,60 @@ import org.springframework.stereotype.Service;
 @Service
 public class SpaceServiceImpl extends ServiceImpl<SpaceMapper, Space>
     implements SpaceService{
+
+    @Resource
+    private UserService userService;
+
+    @Resource
+    private TransactionTemplate transactionTemplate;
+
+    /**
+     * 添加空间
+     *
+     * @param spaceAddRequest   空间
+     * @param loginUser         登录用户
+     * @return                  创建的空间id
+     */
+    @Override
+    public Long addSpace(SpaceAddRequest spaceAddRequest, User loginUser) {
+        // 将实体类和 DTO 进行转换
+        Space space = new Space();
+        BeanUtils.copyProperties(spaceAddRequest, space);
+        // 设置默认值
+        if (StrUtil.isBlank(space.getSpaceName())) {
+            space.setSpaceName("默认空间");
+        }
+        if (space.getSpaceLevel() == null) {
+            space.setSpaceLevel(SpaceLevelEnum.COMMON.getValue());
+        }
+        // 填充字段
+        this.fillSpaceBySpaceLevel(space);
+        // 1、校验参数
+        this.validSpace(space, true);
+        Long userId = loginUser.getId();
+        space.setUserId(userId);
+        // 2、权限校验
+        ThrowUtils.throwIf(
+                SpaceLevelEnum.COMMON.getValue() != spaceAddRequest.getSpaceLevel()
+                        && userService.isAdmin(loginUser),
+                ErrorCode.NOT_AUTH_ERROR,
+                "无权限创建指定级别的空间"
+                );
+        // 3、写入数据库，为了保证每个用户只能创建一个空间，这里使用 锁 + 事务的形式
+        // 针对用户加锁
+        String lock = String.valueOf(userId).intern();
+        synchronized (lock) {
+            Long newSpaceId = transactionTemplate.execute(status -> {
+                boolean exists = this.lambdaQuery().eq(Space::getUserId, userId).exists();
+                ThrowUtils.throwIf(exists, ErrorCode.OPERATION_ERROR, "每个用户只能拥有一个空间");
+                // 写入数据库
+                boolean result = this.save(space);
+                ThrowUtils.throwIf(!result, ErrorCode.SYSTEM_ERROR, "数据库操作失败");
+                return space.getId();
+            });
+            return Optional.ofNullable(newSpaceId).orElse(-1L);
+        }
+    }
 
     /**
      * 校验空间参数
