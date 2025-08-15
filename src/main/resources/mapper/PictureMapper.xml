@@ -18,6 +18,7 @@
             <result property="picScale" column="picScale" />
             <result property="picFormat" column="picFormat" />
             <result property="userId" column="userId" />
+            <result property="spaceId" column="spaceId" />
             <result property="reviewStatus" column="reviewStatus" />
             <result property="reviewMessage" column="reviewMessage" />
             <result property="reviewerId" column="reviewerId" />
@@ -31,6 +32,6 @@
     <sql id="Base_Column_List">
         id,url,thumbnailUrl,name,introduction,category,tags,
         picSize,picWidth,picHeight,picScale,picFormat,
-        userId,reviewStatus,reviewMessage,reviewerId,reviewTime,createTime,editTime,updateTime,isDelete
+        userId,spaceId,reviewStatus,reviewMessage,reviewerId,reviewTime,createTime,editTime,updateTime,isDelete
     </sql>
 </mapper>
