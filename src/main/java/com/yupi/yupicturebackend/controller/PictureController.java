@@ -20,7 +20,6 @@ import com.yupi.yupicturebackend.model.entity.Picture;
 import com.yupi.yupicturebackend.model.entity.Space;
 import com.yupi.yupicturebackend.model.entity.User;
 import com.yupi.yupicturebackend.model.enums.PictureReviewStatusEnum;
-import com.yupi.yupicturebackend.model.enums.SpaceLevelEnum;
 import com.yupi.yupicturebackend.model.vo.PictureTagCategory;
 import com.yupi.yupicturebackend.model.vo.PictureVO;
 import com.yupi.yupicturebackend.service.PictureService;
@@ -39,7 +38,6 @@ import javax.servlet.http.HttpServletRequest;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("picture")
@@ -331,22 +329,4 @@ public class PictureController {
         Integer uploadCount = pictureService.uploadPictureByBatch(pictureUploadByBatchRequest, loginUser);
         return ResultUtils.success(uploadCount);
     }
-
-    /**
-     * 获取全部空间级别信息
-     * @return
-     */
-    @GetMapping("/list/level")
-    public BaseResponse<List<SpaceLevel>> listSpaceLevel() {
-        List<SpaceLevel> spaceLevelList = Arrays.stream(SpaceLevelEnum.values()) // 获取所有枚举
-                .map(spaceLevelEnum -> new SpaceLevel(
-                        spaceLevelEnum.getValue(),
-                        spaceLevelEnum.getText(),
-                        spaceLevelEnum.getMaxCount(),
-                        spaceLevelEnum.getMaxSize()))
-                .collect(Collectors.toList());
-        return ResultUtils.success(spaceLevelList);
-    }
-
-
 }

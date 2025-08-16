@@ -1,15 +1,22 @@
 package com.yupi.yupicturebackend.service.impl;
 
+import cn.hutool.core.collection.CollUtil;
+import cn.hutool.core.util.ObjUtil;
 import cn.hutool.core.util.StrUtil;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.yupi.yupicturebackend.exception.BusinessException;
 import com.yupi.yupicturebackend.exception.ErrorCode;
 import com.yupi.yupicturebackend.exception.ThrowUtils;
 import com.yupi.yupicturebackend.mapper.SpaceMapper;
 import com.yupi.yupicturebackend.model.dto.space.SpaceAddRequest;
+import com.yupi.yupicturebackend.model.dto.space.SpaceQueryRequest;
 import com.yupi.yupicturebackend.model.entity.Space;
 import com.yupi.yupicturebackend.model.entity.User;
 import com.yupi.yupicturebackend.model.enums.SpaceLevelEnum;
+import com.yupi.yupicturebackend.model.vo.SpaceVO;
+import com.yupi.yupicturebackend.model.vo.UserVO;
 import com.yupi.yupicturebackend.service.SpaceService;
 import com.yupi.yupicturebackend.service.UserService;
 import org.springframework.beans.BeanUtils;
@@ -17,7 +24,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import javax.annotation.Resource;
+import javax.servlet.http.HttpServletRequest;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
 * @author 机hui难得
@@ -82,6 +94,7 @@ public class SpaceServiceImpl extends ServiceImpl<SpaceMapper, Space>
         }
     }
 
+
     /**
      * 校验空间参数
      * @param space 空间对象
@@ -110,6 +123,86 @@ public class SpaceServiceImpl extends ServiceImpl<SpaceMapper, Space>
         if (StrUtil.isNotBlank(spaceName) && spaceName.length() > 30) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "空间名称过长");
         }
+    }
+
+    @Override
+    public SpaceVO getSpaceVO(Space space, HttpServletRequest request) {
+        // 对象转封装类
+        SpaceVO spaceVO = SpaceVO.objToVo(space);
+        // 关联查询用户信息
+        Long userId = space.getUserId();
+        if (userId != null && userId > 0) {
+            User user = userService.getById(userId);
+            UserVO userVO = userService.getUserVO(user);
+            spaceVO.setUser(userVO);
+        }
+        return spaceVO;
+    }
+
+    @Override
+    public Page<SpaceVO> getSpaceVOPage(Page<Space> spacePage, HttpServletRequest request) {
+        List<Space> pictureList = spacePage.getRecords();
+        Page<SpaceVO> pictureVOPage = new Page<>(spacePage.getCurrent(), spacePage.getSize(), spacePage.getTotal());
+        if (CollUtil.isEmpty(pictureList)) {
+            return pictureVOPage;
+        }
+        // 对象列表 => 封装对象列表
+        List<SpaceVO> pictureVOList = pictureList.stream().map(SpaceVO::objToVo).collect(Collectors.toList());
+        // 1. 关联查询用户信息
+        Set<Long> userIdSet = pictureList.stream().map(Space::getUserId).collect(Collectors.toSet());
+        Map<Long, List<User>> userIdUserListMap = userService.listByIds(userIdSet).stream()
+                .collect(Collectors.groupingBy(User::getId));
+        // 2. 填充信息
+        pictureVOList.forEach(SpaceVO -> {
+            Long userId = SpaceVO.getUserId();
+            User user = null;
+            if (userIdUserListMap.containsKey(userId)) {
+                user = userIdUserListMap.get(userId).get(0);
+            }
+            SpaceVO.setUser(userService.getUserVO(user));
+        });
+        pictureVOPage.setRecords(pictureVOList);
+        return pictureVOPage;
+    }
+
+    @Override
+    public void checkSpaceAuth(User loginUser, Space space) {
+        Long spaceId = space.getId();
+        if (spaceId == null) {
+            // 公共图库，仅本人或管理员可操作
+            if (!space.getUserId().equals(loginUser.getId()) && !userService.isAdmin(loginUser)) {
+                throw new BusinessException(ErrorCode.NOT_AUTH_ERROR);
+            }
+        } else {
+            // 私有空间，仅空间管理员可操作
+            if (!space.getUserId().equals(loginUser.getId())) {
+                throw new BusinessException(ErrorCode.NOT_AUTH_ERROR);
+            }
+        }
+    }
+
+    @Override
+    public QueryWrapper<Space> getQueryWrapper(SpaceQueryRequest spaceQueryRequest) {
+        QueryWrapper<Space> queryWrapper = new QueryWrapper<>();
+        if (spaceQueryRequest == null) {
+            return queryWrapper;
+        }
+        // 从对象中取值
+        Long id = spaceQueryRequest.getId();
+        Long userId = spaceQueryRequest.getUserId();
+        String spaceName = spaceQueryRequest.getSpaceName();
+        Integer spaceLevel = spaceQueryRequest.getSpaceLevel();
+        String sortField = spaceQueryRequest.getSortField();
+        String sortOrder = spaceQueryRequest.getSortOrder();
+
+        queryWrapper.eq(ObjUtil.isNotEmpty(id), "id", id);
+        queryWrapper.eq(ObjUtil.isNotEmpty(userId), "userId", userId);
+        queryWrapper.like(StrUtil.isNotBlank(spaceName), "spaceName", spaceName);
+        queryWrapper.eq(ObjUtil.isNotEmpty(spaceLevel), "spaceLevel", spaceLevel);
+
+        // 排序
+        queryWrapper.orderBy(StrUtil.isNotEmpty(sortField), sortOrder.equals("ascend"), sortField);
+        return queryWrapper;
     }
 
     /**
