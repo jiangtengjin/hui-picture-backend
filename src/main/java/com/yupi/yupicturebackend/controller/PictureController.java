@@ -157,18 +157,20 @@ public class PictureController {
     public BaseResponse<PictureVO> getPictureVOById(long id, HttpServletRequest request) {
         ThrowUtils.throwIf(id <= 0, ErrorCode.PARAMS_ERROR);
         // 查询数据库
-        // 用户只能查看到过审的图片
-        LambdaQueryWrapper<Picture> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.eq(Picture::getReviewStatus, PictureReviewStatusEnum.PASS.getValue());
-        queryWrapper.eq(Picture::getId, id);
-        Picture picture = pictureService.getOne(queryWrapper);
-//        Picture picture = pictureService.getById(id);
-        ThrowUtils.throwIf(picture == null, ErrorCode.NOT_FOUND_ERROR);
         // 空间权限校验
+        Picture picture = pictureService.getById(id);
+        ThrowUtils.throwIf(picture == null, ErrorCode.NOT_FOUND_ERROR);
         Long spaceId = picture.getSpaceId();
         if (spaceId != null) {
             User loginUser = userService.getLoginUser(request);
             pictureService.checkPictureAuth(loginUser, picture);
+        } else {
+            // 用户只能查看到过审的图片
+            LambdaQueryWrapper<Picture> queryWrapper = new LambdaQueryWrapper<>();
+            queryWrapper.eq(Picture::getReviewStatus, PictureReviewStatusEnum.PASS.getValue());
+            queryWrapper.eq(Picture::getId, id);
+            picture = pictureService.getOne(queryWrapper);
+            ThrowUtils.throwIf(picture == null, ErrorCode.NOT_FOUND_ERROR);
         }
         // 获取封装类
         return ResultUtils.success(pictureService.getPictureVO(picture, request));
@@ -214,6 +216,7 @@ public class PictureController {
             if (!loginUser.getId().equals(space.getUserId())) {
                 throw new BusinessException(ErrorCode.NOT_AUTH_ERROR, "没有空间权限");
             }
+            pictureQueryRequest.setNullSpaceId(false);
         }
         // 查询数据库
         Page<Picture> picturePage = pictureService.page(new Page<>(current, size),
