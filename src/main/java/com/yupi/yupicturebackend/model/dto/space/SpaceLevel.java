@@ -1,4 +1,4 @@
-package com.yupi.yupicturebackend.model.dto.picture;
+package com.yupi.yupicturebackend.model.dto.space;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

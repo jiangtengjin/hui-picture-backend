@@ -10,7 +10,7 @@ import com.yupi.yupicturebackend.constants.UserConstant;
 import com.yupi.yupicturebackend.exception.BusinessException;
 import com.yupi.yupicturebackend.exception.ErrorCode;
 import com.yupi.yupicturebackend.exception.ThrowUtils;
-import com.yupi.yupicturebackend.model.dto.picture.SpaceLevel;
+import com.yupi.yupicturebackend.model.dto.space.SpaceLevel;
 import com.yupi.yupicturebackend.model.dto.space.SpaceAddRequest;
 import com.yupi.yupicturebackend.model.dto.space.SpaceEditRequest;
 import com.yupi.yupicturebackend.model.dto.space.SpaceQueryRequest;
