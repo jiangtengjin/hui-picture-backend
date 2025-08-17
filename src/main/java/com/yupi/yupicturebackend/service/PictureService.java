@@ -10,6 +10,7 @@ import com.yupi.yupicturebackend.model.vo.PictureVO;
 import org.springframework.scheduling.annotation.Async;
 
 import javax.servlet.http.HttpServletRequest;
+import java.util.List;
 
 /**
  * @author 机hui难得
@@ -102,4 +103,13 @@ public interface PictureService extends IService<Picture> {
      * @param picture       图片
      */
     void checkPictureAuth(User loginUser, Picture picture);
+
+    /**
+     *  以颜色搜图
+     * @param spaceId    空间id
+     * @param color      颜色
+     * @param loginUser  登录用户
+     * @return
+     */
+    List<PictureVO> searchPictureByColor(Long spaceId, String color, User loginUser);
 }

@@ -70,7 +70,7 @@ public abstract class PictureUploadTemplate {
                     thumbnailCiObject = objectList.get(1);
                 }
                 // 封装压缩图返回结果
-                return buildResult(originalFilename, compressCiObject, thumbnailCiObject);
+                return buildResult(originalFilename, compressCiObject, thumbnailCiObject, imageInfo);
             }
             // 5、封装返回结果
             return buildResult(uploadPath, file, originalFilename, imageInfo);
@@ -124,7 +124,8 @@ public abstract class PictureUploadTemplate {
     private UploadPictureResult buildResult(
             String originalFilename,
             CIObject compressCiObject,
-            CIObject thumbnailCiObject) {
+            CIObject thumbnailCiObject,
+            ImageInfo imageInfo) {
         UploadPictureResult uploadPictureResult = new UploadPictureResult();
         String format = compressCiObject.getFormat();
         int picWidth = compressCiObject.getWidth();
@@ -139,6 +140,8 @@ public abstract class PictureUploadTemplate {
         uploadPictureResult.setPicHeight(picHeight);
         uploadPictureResult.setPicScale(picScale);
         uploadPictureResult.setPicFormat(format);
+        // 图片主色调
+        uploadPictureResult.setPicColor(imageInfo.getAve());
         return uploadPictureResult;
     }
 
@@ -160,6 +163,8 @@ public abstract class PictureUploadTemplate {
         uploadPictureResult.setPicHeight(picHeight);
         uploadPictureResult.setPicScale(picScale);
         uploadPictureResult.setPicFormat(format);
+        // 图片主色调
+        uploadPictureResult.setPicColor(imageInfo.getAve());
         return uploadPictureResult;
     }
 
