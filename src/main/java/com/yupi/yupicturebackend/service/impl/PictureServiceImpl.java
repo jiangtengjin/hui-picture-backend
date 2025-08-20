@@ -602,7 +602,7 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         // 2、校验权限
         Space space = spaceService.getById(spaceId);
         ThrowUtils.throwIf(space == null, ErrorCode.NOT_FOUND_ERROR, "空间不存在");
-        ThrowUtils.throwIf(loginUser.getId().equals(space.getUserId()), ErrorCode.NOT_AUTH_ERROR,
+        ThrowUtils.throwIf(!loginUser.getId().equals(space.getUserId()), ErrorCode.NOT_AUTH_ERROR,
                 "没有空间访问权限");
         // 3、查询指定图片，仅选择需要的字段
         List<Picture> pictureList = this.lambdaQuery()
