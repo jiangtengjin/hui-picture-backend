@@ -235,7 +235,7 @@ public class SpaceAnalyzeServiceImpl implements SpaceAnalyzeService {
         QueryWrapper<Picture> queryWrapper = new QueryWrapper<>();
         // 根据分析范围补充查询条件
         fillAnalyzeQueryWrapper(request, queryWrapper);
-        Long userId = loginUser.getId();
+        Long userId = request.getUserId();
         queryWrapper.eq(ObjUtil.isNotNull(userId), "userId", userId);
 
         // 分析维度：每日、每周、每月
@@ -264,7 +264,7 @@ public class SpaceAnalyzeServiceImpl implements SpaceAnalyzeService {
         return pictureService.getBaseMapper().selectMaps(queryWrapper).stream()
                 .map(result -> {
                     SpaceUserAnalyzeResponse response = new SpaceUserAnalyzeResponse();
-                    response.setPeriod((String) result.get("period"));
+                    response.setPeriod(result.get("period").toString());
                     response.setCount((Long) result.get("count"));
                     return response;
                 }).collect(Collectors.toList());
