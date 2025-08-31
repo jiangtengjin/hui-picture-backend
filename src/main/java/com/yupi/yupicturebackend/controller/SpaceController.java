@@ -10,6 +10,9 @@ import com.yupi.yupicturebackend.constants.UserConstant;
 import com.yupi.yupicturebackend.exception.BusinessException;
 import com.yupi.yupicturebackend.exception.ErrorCode;
 import com.yupi.yupicturebackend.exception.ThrowUtils;
+import com.yupi.yupicturebackend.manager.auth.SpaceUserAuthManager;
+import com.yupi.yupicturebackend.manager.auth.annotation.SaSpaceCheckPermission;
+import com.yupi.yupicturebackend.manager.auth.constans.SpaceUserAuthConstant;
 import com.yupi.yupicturebackend.model.dto.space.SpaceLevel;
 import com.yupi.yupicturebackend.model.dto.space.SpaceAddRequest;
 import com.yupi.yupicturebackend.model.dto.space.SpaceEditRequest;
@@ -42,6 +45,9 @@ public class SpaceController {
 
     @Resource
     private UserService userService;
+
+    @Resource
+    private SpaceUserAuthManager spaceUserAuthManager;
 
     @PostMapping("add")
     public BaseResponse<Long> addSpace(@RequestBody SpaceAddRequest spaceAddRequest, HttpServletRequest httpServletRequest){
@@ -82,6 +88,7 @@ public class SpaceController {
      * @return
      */
     @PostMapping("/delete")
+    @SaSpaceCheckPermission(SpaceUserAuthConstant.SPACE_USER_MANAGE)
     public BaseResponse<Boolean> deleteSpace(@RequestBody DeleteRequest deleteRequest, HttpServletRequest request) {
         if (deleteRequest == null || deleteRequest.getId() <= 0) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
@@ -120,12 +127,17 @@ public class SpaceController {
      * 分页获取空间图片（封装类）
      */
     @GetMapping("/get/vo")
+    @SaSpaceCheckPermission(SpaceUserAuthConstant.SPACE_USER_MANAGE)
     public BaseResponse<SpaceVO> getSpaceVOById(long id, HttpServletRequest request) {
         ThrowUtils.throwIf(id <= 0, ErrorCode.PARAMS_ERROR);
         // 查询数据库
         Space space = spaceService.getById(id);
         ThrowUtils.throwIf(space == null, ErrorCode.NOT_FOUND_ERROR);
         SpaceVO spaceVO = spaceService.getSpaceVO(space, request);
+        User loginUser = userService.getLoginUser(request);
+        // 返回权限列表
+        List<String> permissionList = spaceUserAuthManager.getPermissionList(space, loginUser);
+        spaceVO.setPermissionList(permissionList);
         // 获取封装类
         return ResultUtils.success(spaceVO);
     }
@@ -148,6 +160,7 @@ public class SpaceController {
      * 分页获取空间列表（封装类）
      */
     @PostMapping("/list/page/vo")
+    @SaSpaceCheckPermission(SpaceUserAuthConstant.SPACE_USER_MANAGE)
     public BaseResponse<Page<SpaceVO>> listSpaceVOByPage(@RequestBody SpaceQueryRequest spaceQueryRequest,
                                                          HttpServletRequest request) {
         long current = spaceQueryRequest.getCurrent();
@@ -165,6 +178,7 @@ public class SpaceController {
      * 编辑图片（给用户使用）和更新图片类似
      */
     @PostMapping("/edit")
+    @SaSpaceCheckPermission(SpaceUserAuthConstant.SPACE_USER_MANAGE)
     public BaseResponse<Boolean> editSpace(@RequestBody SpaceEditRequest spaceEditRequest, HttpServletRequest request) {
         if (spaceEditRequest == null || spaceEditRequest.getId() <= 0) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);

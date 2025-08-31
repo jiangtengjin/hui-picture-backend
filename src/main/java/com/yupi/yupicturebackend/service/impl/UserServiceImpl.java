@@ -10,6 +10,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.yupi.yupicturebackend.constants.UserConstant;
 import com.yupi.yupicturebackend.exception.ErrorCode;
 import com.yupi.yupicturebackend.exception.ThrowUtils;
+import com.yupi.yupicturebackend.manager.auth.StpKit;
 import com.yupi.yupicturebackend.mapper.UserMapper;
 import com.yupi.yupicturebackend.model.dto.user.UserLoginRequest;
 import com.yupi.yupicturebackend.model.dto.user.UserQueryRequest;
@@ -121,8 +122,9 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
 
         // 4、记录用户的登录状态
         request.getSession().setAttribute(UserConstant.USER_LOGIN_STATE, user);
-
-        // 4、返回数据
+        // 5、记录用户的登录态到 sa-token，便于空间鉴权时使用，注意保证该用户信息与 SpringSession 中的过期时间一致
+        StpKit.SPACE.login(user.getId());
+        StpKit.SPACE.getSession().set(UserConstant.USER_LOGIN_STATE, user);
         return this.getUserLoginVO(user);
     }
 
