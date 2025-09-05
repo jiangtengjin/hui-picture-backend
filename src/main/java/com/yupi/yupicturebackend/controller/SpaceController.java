@@ -127,7 +127,6 @@ public class SpaceController {
      * 分页获取空间图片（封装类）
      */
     @GetMapping("/get/vo")
-    @SaSpaceCheckPermission(SpaceUserAuthConstant.SPACE_USER_MANAGE)
     public BaseResponse<SpaceVO> getSpaceVOById(long id, HttpServletRequest request) {
         ThrowUtils.throwIf(id <= 0, ErrorCode.PARAMS_ERROR);
         // 查询数据库
@@ -160,7 +159,6 @@ public class SpaceController {
      * 分页获取空间列表（封装类）
      */
     @PostMapping("/list/page/vo")
-    @SaSpaceCheckPermission(SpaceUserAuthConstant.SPACE_USER_MANAGE)
     public BaseResponse<Page<SpaceVO>> listSpaceVOByPage(@RequestBody SpaceQueryRequest spaceQueryRequest,
                                                          HttpServletRequest request) {
         long current = spaceQueryRequest.getCurrent();
