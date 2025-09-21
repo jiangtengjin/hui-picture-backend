@@ -2,11 +2,11 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
-    <groupId>com.yupi</groupId>
-    <artifactId>yu-picture-backend</artifactId>
+    <groupId>com.hui</groupId>
+    <artifactId>hui-picture-backend</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>yu-picture-backend</name>
-    <description>yu-picture-backend</description>
+    <name>hui-picture-backend</name>
+    <description>hui-picture-backend</description>
     <properties>
         <java.version>1.8</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -160,7 +160,7 @@
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <version>${spring-boot.version}</version>
                 <configuration>
-                    <mainClass>com.yupi.yupicturebackend.YuPictureBackendApplication</mainClass>
+                    <mainClass>com.xhh.yupicturebackend.YuPictureBackendApplication</mainClass>
                     <skip>true</skip>
                 </configuration>
                 <executions>

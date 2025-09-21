@@ -9,7 +9,7 @@ server:
         max-age: 2592000
 spring:
   application:
-    name: yu-picture-backend
+    name: hui-picture-backend
   #  数据库配置
   datasource:
     url: jdbc:mysql://192.168.179.127:3306/yu_picture
@@ -55,7 +55,7 @@ spring:
             type: CLASS_BASED
             props:
               strategy: standard
-              algorithmClassName: com.yupi.yupicturebackend.manager.sharding.PictureShardingAlgorithm
+              algorithmClassName: com.xhh.yupicturebackend.manager.sharding.PictureShardingAlgorithm
     props:
       sql-show: true
 
@@ -83,5 +83,5 @@ knife4j:
       default:
         api-rule: package
         api-rule-resources:
-          - com.yupi.yupicturebackend.controller
+          - com.xhh.yupicturebackend.controller
 
