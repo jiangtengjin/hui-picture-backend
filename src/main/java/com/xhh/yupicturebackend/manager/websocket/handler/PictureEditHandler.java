@@ -1,6 +1,7 @@
 package com.xhh.yupicturebackend.manager.websocket.handler;
 
 import cn.hutool.core.collection.CollUtil;
+import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.json.JSONUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
@@ -68,6 +69,22 @@ public class PictureEditHandler extends TextWebSocketHandler {
         pictureEditResponseMessage.setUser(userService.getUserVO(user));
         // 广播给同一张图片的用户
         broadcastToPicture(pictureId, pictureEditResponseMessage);
+
+        // 如果是后面进来的，这里就可以把当前正在编辑的用户信息给当前用户
+        Long editingUserId = pictureEditingUsers.get(pictureId);
+        if (editingUserId != null) {
+            User editingUser = userService.getById(editingUserId);
+            if (ObjectUtil.isNotEmpty(editingUser)) {
+                // 构建编辑消息
+                String msg = String.format("用户 %s 正在编辑图片", editingUser.getUserName());
+                PictureEditResponseMessage editingMsg = new PictureEditResponseMessage();
+                editingMsg.setType(PictureEditMessageTypeEnum.ENTER_EDIT.getValue());
+                editingMsg.setUser(userService.getUserVO(editingUser));
+                editingMsg.setMessage(msg);
+                // 单独发送消息给当前用户
+                session.sendMessage(new TextMessage(JSONUtil.toJsonStr(editingMsg)));
+            }
+        }
     }
 
     /**
@@ -127,7 +144,9 @@ public class PictureEditHandler extends TextWebSocketHandler {
      * @param user
      * @param pictureId
      */
-    public void handleExitEditMessage(WebSocketSession session, PictureEditRequestMessage pictureEditRequestMessage, User user, Long pictureId) throws Exception {
+    public void handleExitEditMessage(WebSocketSession session,
+                                      PictureEditRequestMessage pictureEditRequestMessage,
+                                      User user, Long pictureId) throws Exception {
         Long editingUserId = pictureEditingUsers.get(pictureId);
         if (editingUserId != null && editingUserId.equals(user.getId())) {
             // 移除当前用户的编辑状态
@@ -151,7 +170,10 @@ public class PictureEditHandler extends TextWebSocketHandler {
      * @param user
      * @param pictureId
      */
-    public void handleEditActionMessage(WebSocketSession session, PictureEditRequestMessage pictureEditRequestMessage, User user, Long pictureId) throws Exception {
+    public void handleEditActionMessage(WebSocketSession session,
+                                        PictureEditRequestMessage pictureEditRequestMessage,
+                                        User user,
+                                        Long pictureId) throws Exception {
         Long editingUserId = pictureEditingUsers.get(pictureId);
         String editAction = pictureEditRequestMessage.getEditAction();
         PictureEditActionEnum actionEnum = PictureEditActionEnum.getEnumByValue(editAction);
@@ -181,7 +203,10 @@ public class PictureEditHandler extends TextWebSocketHandler {
      * @param user
      * @param pictureId
      */
-    public void handleEnterEditMessage(WebSocketSession session, PictureEditRequestMessage pictureEditRequestMessage, User user, Long pictureId) throws Exception {
+    public void handleEnterEditMessage(WebSocketSession session,
+                                        PictureEditRequestMessage pictureEditRequestMessage,
+                                        User user,
+                                        Long pictureId) throws Exception {
         // 没有用户正在编辑图片才能进入编辑
         if (!pictureEditingUsers.containsKey(pictureId)) {
             // 设置当前用户为编辑用户

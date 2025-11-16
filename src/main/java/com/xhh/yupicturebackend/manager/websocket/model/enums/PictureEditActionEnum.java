@@ -8,7 +8,8 @@ public enum PictureEditActionEnum {
     ZOOM_IN("放大操作", "ZOOM_IN"),
     ZOOM_OUT("缩小操作", "ZOOM_OUT"),
     ROTATE_LEFT("左旋操作", "ROTATE_LEFT"),
-    ROTATE_RIGHT("右旋操作", "ROTATE_RIGHT");
+    ROTATE_RIGHT("右旋操作", "ROTATE_RIGHT"),
+    SAVE("保存操作", "SAVE");
 
     private final String text;
     private final String value;
