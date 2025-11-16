@@ -39,6 +39,9 @@ public class PictureEditHandler extends TextWebSocketHandler {
     @Resource
     private PictureEditEventProducer pictureEditEventProducer;
 
+    @Resource
+    private ObjectMapper objectMapper;
+
     // 每张图片的编辑状态，key: pictureId, value: 当前正在编辑的用户 ID
     private final Map<Long, Long> pictureEditingUsers = new ConcurrentHashMap<>();
 
@@ -60,15 +63,22 @@ public class PictureEditHandler extends TextWebSocketHandler {
         pictureSessions.putIfAbsent(pictureId, ConcurrentHashMap.newKeySet());
         pictureSessions.get(pictureId).add(session);
 
-        // 通知其他用户
-        // 1、构造响应
-        PictureEditResponseMessage pictureEditResponseMessage = new PictureEditResponseMessage();
-        pictureEditResponseMessage.setType(PictureEditMessageTypeEnum.INFO.getValue());
-        String message = String.format("%s 加入编辑", user.getUserName());
-        pictureEditResponseMessage.setMessage(message);
-        pictureEditResponseMessage.setUser(userService.getUserVO(user));
-        // 广播给同一张图片的用户
-        broadcastToPicture(pictureId, pictureEditResponseMessage);
+        // 如果没有用户进入编辑状态，当前用户自动进入编辑
+        if (!pictureEditingUsers.containsKey(pictureId)) {
+            this.handleEnterEditMessage(session,
+                    new PictureEditRequestMessage(),
+                    user, pictureId);
+        } else {
+            // 有人正在编辑，发送加入编辑的事件
+            PictureEditResponseMessage pictureEditResponseMessage = new PictureEditResponseMessage();
+            pictureEditResponseMessage.setUser(userService.getUserVO(user));
+            pictureEditResponseMessage = new PictureEditResponseMessage();
+            pictureEditResponseMessage.setType(PictureEditMessageTypeEnum.INFO.getValue());
+            String message = String.format("%s 加入编辑", user.getUserName());
+            pictureEditResponseMessage.setMessage(message);
+            // 广播给同一张图片的用户
+            broadcastToPicture(pictureId, pictureEditResponseMessage);
+        }
 
         // 如果是后面进来的，这里就可以把当前正在编辑的用户信息给当前用户
         Long editingUserId = pictureEditingUsers.get(pictureId);
@@ -82,7 +92,11 @@ public class PictureEditHandler extends TextWebSocketHandler {
                 editingMsg.setUser(userService.getUserVO(editingUser));
                 editingMsg.setMessage(msg);
                 // 单独发送消息给当前用户
-                session.sendMessage(new TextMessage(JSONUtil.toJsonStr(editingMsg)));
+                String str = objectMapper.writeValueAsString(editingMsg);
+                TextMessage textMessage = new TextMessage(str);
+                if (session.isOpen()) {
+                    session.sendMessage(textMessage);
+                }
             }
         }
     }
