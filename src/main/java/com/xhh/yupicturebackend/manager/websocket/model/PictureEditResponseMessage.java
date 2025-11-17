@@ -11,7 +11,7 @@ import lombok.NoArgsConstructor;
 public class PictureEditResponseMessage {
 
     /**
-     * 消息类型，例如 "INFO", "ERROR", "ENTER_EDIT", "EXIT_EDIT", "EDIT_ACTION"
+     * 消息类型，例如 "INFO", "ERROR", "ENTER_EDIT", "EXIT_EDIT", "EDIT_ACTION", "HEART_BEAT", "SYNC_REQUEST"
      */
     private String type;
 
@@ -29,4 +29,14 @@ public class PictureEditResponseMessage {
      * 用户信息
      */
     private UserVO user;
+
+    /**
+     * 同步数据
+     */
+    private SyncData data;
+
+    /**
+     * 时间戳
+     */
+    private long timestamp;
 }

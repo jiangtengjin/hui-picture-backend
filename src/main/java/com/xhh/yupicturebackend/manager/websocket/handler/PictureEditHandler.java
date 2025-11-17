@@ -8,9 +8,11 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import com.xhh.yupicturebackend.manager.websocket.model.PictureEditRequestMessage;
 import com.xhh.yupicturebackend.manager.websocket.model.PictureEditResponseMessage;
+import com.xhh.yupicturebackend.manager.websocket.model.SyncData;
 import com.xhh.yupicturebackend.manager.websocket.model.enums.PictureEditActionEnum;
 import com.xhh.yupicturebackend.manager.websocket.model.enums.PictureEditMessageTypeEnum;
 import com.xhh.yupicturebackend.model.entity.User;
+import com.xhh.yupicturebackend.model.vo.UserVO;
 import com.xhh.yupicturebackend.service.UserService;
 import groovyjarjarantlr4.v4.runtime.misc.NotNull;
 import lombok.extern.slf4j.Slf4j;
@@ -20,10 +22,19 @@ import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
+import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
 import javax.annotation.Resource;
+import java.io.IOException;
+import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 /**
  * Websocket 处理器
@@ -47,6 +58,61 @@ public class PictureEditHandler extends TextWebSocketHandler {
 
     // 保存所有连接的会话，key: pictureId, value: 用户会话集合
     private final Map<Long, Set<WebSocketSession>> pictureSessions = new ConcurrentHashMap<>();
+
+    // 添加心跳和重连相关字段
+    private final Map<String, Long> lastHeartbeatTime = new ConcurrentHashMap<>();
+    private static final long HEARTBEAT_INTERVAL = 30000; // 30 秒超时
+    private final ScheduledExecutorService heartbeatChecker = Executors.newScheduledThreadPool(1);
+
+    @PostConstruct
+    public void init () {
+        // 启动心跳检测
+        heartbeatChecker.scheduleAtFixedRate(this::checkHeartbeats, 30, 30, TimeUnit.SECONDS);
+    }
+
+    @PreDestroy
+    public void destroy() {
+        heartbeatChecker.shutdown();
+    }
+
+    /**
+     * 检查心跳，处理超时连接
+     */
+    private void checkHeartbeats() {
+        long currentTime = System.currentTimeMillis();
+        lastHeartbeatTime.entrySet().removeIf(entry -> {
+            if (currentTime - entry.getValue() > HEARTBEAT_INTERVAL) {
+                String sessionId = entry.getKey();
+                WebSocketSession session = getSessionById(sessionId);
+                if (session != null) {
+                    try {
+                        log.warn("心跳超时，关闭连接：{}", sessionId);
+                        session.close(CloseStatus.SESSION_NOT_RELIABLE);
+                    } catch (IOException e) {
+                        log.error("关闭超时连接失败", e);
+                    }
+                }
+                return true;
+            }
+            return false;
+        });
+    }
+
+    /**
+     * 根据 sessionId 获取 WebSocketSession
+     * @param sessionId
+     * @return
+     */
+    private WebSocketSession getSessionById(String sessionId) {
+        for (Set<WebSocketSession> sessionSet : pictureSessions.values()) {
+            for (WebSocketSession session : sessionSet) {
+                if (session.getId().equals(sessionId)) {
+                    return session;
+                }
+            }
+        }
+        return null;
+    }
 
     /**
      * 连接成功时调用
@@ -133,6 +199,9 @@ public class PictureEditHandler extends TextWebSocketHandler {
      */
     @Override
     public void afterConnectionClosed(WebSocketSession session, @NotNull CloseStatus status) throws Exception {
+        // 移除心跳
+        lastHeartbeatTime.remove(session.getId());
+
         Map<String, Object> attributes = session.getAttributes();
         User user = (User) attributes.get("user");
         Long pictureId = (Long) attributes.get("pictureId");
@@ -147,6 +216,8 @@ public class PictureEditHandler extends TextWebSocketHandler {
                 pictureSessions.remove(pictureId);
             }
         }
+
+        log.info("用户 {} 断开连接。图片 ID：{}，关闭原因：{}", user.getUserName(), pictureId, status.toString());
     }
 
     /**
@@ -232,6 +303,94 @@ public class PictureEditHandler extends TextWebSocketHandler {
             pictureEditResponseMessage.setMessage(message);
             pictureEditResponseMessage.setUser(userService.getUserVO(user));
             broadcastToPicture(pictureId, pictureEditResponseMessage);
+        }
+    }
+
+    /**
+     * 处理心跳消息
+     *
+     * @param session
+     */
+    public void handleHeartbeatMessage(WebSocketSession session) {
+        lastHeartbeatTime.put(session.getId(), System.currentTimeMillis());
+
+        // 发送心跳响应
+        try {
+            PictureEditResponseMessage response = new PictureEditResponseMessage();
+            response.setType(PictureEditMessageTypeEnum.HEART_BEAT.getValue());
+            response.setTimestamp(System.currentTimeMillis());
+            sendMessageToSession(session, response);
+        } catch (Exception e) {
+            log.error("发送心跳响应失败", e);
+        }
+    }
+
+    /**
+     * 处理同步请求
+     *
+     * @param session
+     * @param request
+     * @throws Exception
+     */
+    public void handleSyncRequestMessage(WebSocketSession session, PictureEditRequestMessage request) throws Exception {
+        Map<String, Object> attributes = session.getAttributes();
+        Long pictureId = (Long) attributes.get("pictureId");
+        User user = (User) attributes.get("user");
+
+        // 构建同步数据
+        PictureEditResponseMessage syncResponse = new PictureEditResponseMessage();
+        syncResponse.setType("sync_data");
+        syncResponse.setTimestamp(System.currentTimeMillis());
+
+        // 同步数据应该包含：
+        // 1. 当前编辑状态
+        // 2. 最近的操作历史
+        // 3. 当前在线用户
+        SyncData syncData = buildSyncData(pictureId, user);
+        syncResponse.setData(syncData);
+
+        sendMessageToSession(session, syncResponse);
+
+        log.info("向用户 {} 发送同步数据，图片ID: {}", user.getUserName(), pictureId);
+    }
+
+    /**
+     * 构建同步数据
+     */
+    private SyncData buildSyncData(Long pictureId, User user) {
+        SyncData syncData = new SyncData();
+
+        // 当前编辑者
+        Long editingUserId = pictureEditingUsers.get(pictureId);
+        syncData.setCurrentEditor(editingUserId);
+
+        // 在线用户列表
+        Set<WebSocketSession> sessions = pictureSessions.get(pictureId);
+        if (CollUtil.isNotEmpty(sessions)) {
+            List<UserVO> onlineUsers = sessions.stream()
+                    .map(s -> (User) s.getAttributes().get("user"))
+                    .filter(Objects::nonNull)
+                    .map(userService::getUserVO)
+                    .collect(Collectors.toList());
+            syncData.setOnlineUsers(onlineUsers);
+        }
+
+        // 这里可以添加操作历史等更多同步数据
+        syncData.setLastSyncTime(System.currentTimeMillis());
+
+        return syncData;
+    }
+
+    /**
+     * 向单个会话发送消息
+     *
+     * @param session       消息接收者
+     * @param message      消息内容
+     */
+    private void sendMessageToSession(WebSocketSession session, PictureEditResponseMessage message) throws Exception {
+        if (session.isOpen()) {
+            String json = objectMapper.writeValueAsString(message);
+            session.sendMessage(new TextMessage(json));
         }
     }
 
