@@ -339,7 +339,7 @@ public class PictureEditHandler extends TextWebSocketHandler {
 
         // 构建同步数据
         PictureEditResponseMessage syncResponse = new PictureEditResponseMessage();
-        syncResponse.setType("sync_data");
+        syncResponse.setType(PictureEditMessageTypeEnum.SYNC_REQUEST.getValue());
         syncResponse.setTimestamp(System.currentTimeMillis());
 
         // 同步数据应该包含：
