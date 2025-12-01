@@ -34,6 +34,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 /**
@@ -58,6 +59,8 @@ public class SpaceServiceImpl extends ServiceImpl<SpaceMapper, Space>
 
     @Resource
     private TransactionTemplate transactionTemplate;
+
+    private final Map<Long, Object> map = new ConcurrentHashMap<>();
 
     /**
      * 添加空间
@@ -96,31 +99,36 @@ public class SpaceServiceImpl extends ServiceImpl<SpaceMapper, Space>
                 );
         // 3、写入数据库，为了保证每个用户只能创建一个空间，这里使用 锁 + 事务的形式
         // 针对用户加锁
-        String lock = String.valueOf(userId).intern();
+//        String lock = String.valueOf(userId).intern();
+        Object lock = map.computeIfAbsent(userId, k -> new Object());
         synchronized (lock) {
             Long newSpaceId = transactionTemplate.execute(status -> {
-                boolean exists = this.lambdaQuery()
-                        .eq(Space::getUserId, userId)
-                        .eq(Space::getSpaceType, space.getSpaceType())
-                        .exists();
-                ThrowUtils.throwIf(exists, ErrorCode.OPERATION_ERROR, "每个用户只能拥有一个空间");
-                // 写入数据库
-                boolean result = this.save(space);
-                ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
-                // 如果是团队空间，关联新增团队成员记录
-                if (SpaceTypeEnum.TEAM.getValue() == spaceAddRequest.getSpaceType()) {
-                    SpaceUser spaceUser = new SpaceUser();
-                    spaceUser.setSpaceId(space.getId());
-                    spaceUser.setUserId(userId);
-                    spaceUser.setSpaceRole(SpaceRoleEnum.ADMIN.getValue());
-                    result = spaceUserService.save(spaceUser);
-                    ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR, "创建团队成员记录失败");
-                }
-                // 创建分表
+                try {
+                    boolean exists = this.lambdaQuery()
+                            .eq(Space::getUserId, userId)
+                            .eq(Space::getSpaceType, space.getSpaceType())
+                            .exists();
+                    ThrowUtils.throwIf(exists, ErrorCode.OPERATION_ERROR, "每个用户只能拥有一个空间");
+                    // 写入数据库
+                    boolean result = this.save(space);
+                    ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
+                    // 如果是团队空间，关联新增团队成员记录
+                    if (SpaceTypeEnum.TEAM.getValue() == spaceAddRequest.getSpaceType()) {
+                        SpaceUser spaceUser = new SpaceUser();
+                        spaceUser.setSpaceId(space.getId());
+                        spaceUser.setUserId(userId);
+                        spaceUser.setSpaceRole(SpaceRoleEnum.ADMIN.getValue());
+                        result = spaceUserService.save(spaceUser);
+                        ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR, "创建团队成员记录失败");
+                    }
+                    // 创建分表
 //                dynamicShardingManager.createSpacePictureTable(space);
-                // 返回新写入的数据 id
-                return space.getId();
-
+                    // 返回新写入的数据 id
+                    return space.getId();
+                } finally {
+                    // 释放锁对象，防止内存泄漏
+                    map.remove(userId);
+                }
             });
             return Optional.ofNullable(newSpaceId).orElse(-1L);
         }
