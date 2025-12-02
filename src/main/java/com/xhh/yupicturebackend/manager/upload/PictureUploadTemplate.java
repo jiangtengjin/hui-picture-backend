@@ -58,6 +58,7 @@ public abstract class PictureUploadTemplate {
             processFile(inputSource, file);
             // 4、上传图片到对象存储
             PutObjectResult putObjectResult = cosManager.putPictureObject(uploadPath, file);
+            // https://yu-picture-1372346116.cos.ap-guangzhou.myqcloud.com/space/1/2025-12-02_tgddpgaaNPE0qAbg.jpg
             ImageInfo imageInfo = putObjectResult.getCiUploadResult().getOriginalInfo().getImageInfo();
             ProcessResults processResults = putObjectResult.getCiUploadResult().getProcessResults();
             List<CIObject> objectList = processResults.getObjectList();
@@ -65,12 +66,12 @@ public abstract class PictureUploadTemplate {
                 CIObject compressCiObject = objectList.get(0);
                 // 缩略图默认等于压缩图
                 CIObject thumbnailCiObject = compressCiObject;
-                // 有缩略图才得到缩略图
+                // 有缩略图才得到压缩图
                 if (objectList.size() > 1) {
                     thumbnailCiObject = objectList.get(1);
                 }
                 // 封装压缩图返回结果
-                return buildResult(originalFilename, compressCiObject, thumbnailCiObject, imageInfo);
+                return buildResult(originalFilename, compressCiObject, thumbnailCiObject, imageInfo, uploadPath);
             }
             // 5、封装返回结果
             return buildResult(uploadPath, file, originalFilename, imageInfo);
@@ -125,13 +126,16 @@ public abstract class PictureUploadTemplate {
             String originalFilename,
             CIObject compressCiObject,
             CIObject thumbnailCiObject,
-            ImageInfo imageInfo) {
+            ImageInfo imageInfo,
+            String uploadPath) {
         UploadPictureResult uploadPictureResult = new UploadPictureResult();
         String format = compressCiObject.getFormat();
         int picWidth = compressCiObject.getWidth();
         int picHeight = compressCiObject.getHeight();
         // 计算图片宽高比
         double picScale = NumberUtil.round(picWidth * 1.0 / picHeight, 2).doubleValue();
+        // 设置原图 url
+        uploadPictureResult.setOriginUrl(cosClientConfig.getHost() + uploadPath);
         uploadPictureResult.setUrl(cosClientConfig.getHost() + "/" + compressCiObject.getKey());
         uploadPictureResult.setThumbnailUrl(cosClientConfig.getHost() + "/" + thumbnailCiObject.getKey());
         uploadPictureResult.setPicName(FileUtil.mainName(originalFilename));
@@ -157,6 +161,7 @@ public abstract class PictureUploadTemplate {
         // 计算图片宽高比
         double picScale = NumberUtil.round(picWidth * 1.0 / picHeight, 2).doubleValue();
         uploadPictureResult.setUrl(cosClientConfig.getHost() + "/" + uploadPath);
+        uploadPictureResult.setOriginUrl(cosClientConfig.getHost() + "/" + uploadPath);
         uploadPictureResult.setPicName(FileUtil.mainName(originalFilename));
         uploadPictureResult.setPicSize(FileUtil.size(file));
         uploadPictureResult.setPicWidth(picWidth);

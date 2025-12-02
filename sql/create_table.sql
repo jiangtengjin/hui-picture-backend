@@ -66,6 +66,11 @@ ALTER TABLE picture
     -- 添加新列
     ADD COLUMN thumbnailUrl varchar(512) NULL COMMENT '缩略图 url';
 
+-- 添加新列
+ALTER TABLE picture
+    -- 添加新列
+    ADD COLUMN originUrl varchar(512) NULL COMMENT '原图 url';
+
 -- 空间表
 create table if not exists space
 (

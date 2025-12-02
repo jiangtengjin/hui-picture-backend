@@ -152,6 +152,8 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         picture.setUrl(uploadPictureResult.getUrl());
         // 缩略图地址
         picture.setThumbnailUrl(uploadPictureResult.getThumbnailUrl());
+        // 原图地址
+        picture.setOriginUrl(uploadPictureResult.getOriginUrl());
         String picName = uploadPictureResult.getPicName();
         if (ObjUtil.isNotEmpty(pictureUploadRequest) && StrUtil.isNotBlank(pictureUploadRequest.getPicName())) {
             picName = pictureUploadRequest.getPicName();

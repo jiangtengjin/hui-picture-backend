@@ -8,6 +8,7 @@
             <id property="id" column="id" />
             <result property="url" column="url" />
             <result property="thumbnailUrl" column="thumbnailUrl" />
+            <result property="originUrl" column="originUrl" />
             <result property="name" column="name" />
             <result property="introduction" column="introduction" />
             <result property="category" column="category" />
@@ -31,7 +32,7 @@
     </resultMap>
 
     <sql id="Base_Column_List">
-        id,url,thumbnailUrl,name,introduction,category,tags,
+        id,url,thumbnailUrl,originUrl,`name`,introduction,category,tags,
         picSize,picWidth,picHeight,picScale,picFormat,picColor,
         userId,spaceId,reviewStatus,reviewMessage,reviewerId,reviewTime,createTime,editTime,updateTime,isDelete
     </sql>
