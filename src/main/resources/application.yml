@@ -10,6 +10,9 @@ server:
 spring:
   application:
     name: hui-picture-backend
+  # 配置文件
+  profiles:
+    active: local
   #  数据库配置
   datasource:
     url: jdbc:mysql://192.168.179.127:3306/yu_picture
@@ -84,4 +87,3 @@ knife4j:
         api-rule: package
         api-rule-resources:
           - com.xhh.yupicturebackend.controller
-

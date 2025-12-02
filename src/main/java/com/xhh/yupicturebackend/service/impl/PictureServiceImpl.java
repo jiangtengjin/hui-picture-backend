@@ -36,6 +36,7 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -91,11 +92,6 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         if (spaceId != null) {
             Space space = spaceService.getById(spaceId);
             ThrowUtils.throwIf(ObjUtil.isNull(space), ErrorCode.NOT_FOUND_ERROR, "空间不存在");
-            // 校验空间权限，必须是创建人才能上传
-//            ThrowUtils.throwIf(
-//                    !loginUser.getId().equals(space.getUserId()),
-//                    ErrorCode.NOT_AUTH_ERROR,
-//                    "没有空间权限");
             // 校验额度
             if (space.getTotalCount() >= space.getMaxCount()) {
                 throw new BusinessException(ErrorCode.OPERATION_ERROR, "空间条数不足");
@@ -114,11 +110,6 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         if (picId != null) {
             oldPicture = this.getById(picId);
             ThrowUtils.throwIf(oldPicture == null, ErrorCode.NOT_FOUND_ERROR, "图片不存在");
-            // 仅本人或管理员可编辑
-//            if (!oldPicture.getUserId().equals(loginUser.getId()) && !userService.isAdmin(loginUser)) {
-//                throw new BusinessException(ErrorCode.NOT_AUTH_ERROR);
-//            }
-            // 校验空间是否一致
             // 没传 spaceId 则复用原有图片的 spaceId
             if (spaceId == null) {
                 if (oldPicture.getSpaceId() != null) {
@@ -191,9 +182,9 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
             }
             return picture;
         });
-        // todo 当更新操作时，需要清理图片
+        // 当更新操作时，需要清理图片
         if (oldPicture != null) {
-            this.clearPictureFile(oldPicture);
+            this.deletePicture(oldPicture.getId(), loginUser);
         }
         return PictureVO.objToVo(picture);
     }
@@ -472,13 +463,30 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         if (count > 1) {
             return;
         }
-        // FIXME 注意，这里的 url 包含了域名，实际上只要传 key 值（存储路径）就够了
-        cosManager.deleteObject(oldPicture.getUrl());
+        // 注意，这里的 url 包含了域名，实际上只要传 key 值（存储路径）就够了
+        cosManager.deleteObject(this.getPictureKey(oldPicture.getUrl()));
         // 清理缩略图
         String thumbnailUrl = oldPicture.getThumbnailUrl();
         if (StrUtil.isNotBlank(thumbnailUrl)) {
-            cosManager.deleteObject(thumbnailUrl);
+            cosManager.deleteObject(this.getPictureKey(thumbnailUrl));
         }
+        // 清理原图
+        String originUrl = oldPicture.getOriginUrl();
+        if (StrUtil.isNotBlank(originUrl)) {
+            cosManager.deleteObject(this.getPictureKey(originUrl));
+        }
+    }
+
+    @Value("${cos.client.host}")
+    private String host;
+
+    /**
+     * 获取图片的 key
+     *
+     * @param url 图片的 url
+     */
+    public String getPictureKey(String url){
+        return url.substring(host.length());
     }
 
     @Override
@@ -513,8 +521,6 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         // 判断是否存在
         Picture oldPicture = this.getById(pictureId);
         ThrowUtils.throwIf(oldPicture == null, ErrorCode.NOT_FOUND_ERROR);
-        // 校验权限
-//        checkPictureAuth(loginUser, oldPicture);
         // 开启事务
         transactionTemplate.execute(status -> {
             // 操作数据库
