@@ -53,10 +53,10 @@ create table if not exists picture
 
 ALTER TABLE picture
     -- 添加新列
-    ADD COLUMN reviewStatus INT DEFAULT 0 NOT NULL COMMENT '审核状态：0-待审核; 1-通过; 2-拒绝',
-    ADD COLUMN reviewMessage VARCHAR(512) NULL COMMENT '审核信息',
-    ADD COLUMN reviewerId BIGINT NULL COMMENT '审核人 ID',
-    ADD COLUMN reviewTime DATETIME NULL COMMENT '审核时间';
+    ADD COLUMN reviewStatus  INT DEFAULT 0 NOT NULL COMMENT '审核状态：0-待审核; 1-通过; 2-拒绝',
+    ADD COLUMN reviewMessage VARCHAR(512)  NULL COMMENT '审核信息',
+    ADD COLUMN reviewerId    BIGINT        NULL COMMENT '审核人 ID',
+    ADD COLUMN reviewTime    DATETIME      NULL COMMENT '审核时间';
 
 -- 创建基于 reviewStatus 列的索引
 CREATE INDEX idx_reviewStatus ON picture (reviewStatus);
@@ -94,7 +94,7 @@ create table if not exists space
 
 -- 添加新列
 ALTER TABLE picture
-    ADD COLUMN spaceId  bigint  null comment '空间 id（为空表示公共空间）';
+    ADD COLUMN spaceId bigint null comment '空间 id（为空表示公共空间）';
 
 -- 创建索引
 CREATE INDEX idx_spaceId ON picture (spaceId);
@@ -123,3 +123,27 @@ create table if not exists space_user
     INDEX idx_spaceId (spaceId),                    -- 提升按空间查询的性能
     INDEX idx_userId (userId)                       -- 提升按用户查询的性能
 ) comment '空间用户关联' collate = utf8mb4_unicode_ci;
+
+-- AI 扩图任务表
+create table if not exists expand_picture_task
+(
+    id               bigint auto_increment comment 'id' primary key,
+    userId           bigint                             not null comment '用户 id',
+    requestId        varchar(128)                       not null comment '请求 id',
+    taskId           varchar(128)                       not null comment '任务 id',
+    taskStatus       int      default 0                 null comment '任务状态：0，任务不存在；1，执行成功；-1，执行失败；2，执行中；3，排队中；4，已取消',
+    outputPictureUrl varchar(128)                       null comment '输出图像 url 地址',
+    code             varchar(32)                        null comment '请求错误码',
+    message          varchar(128)                       null comment '错误信息',
+    total            int      default 0                 null comment '任务总数',
+    succeeded        int      default 0                 null comment '成功数',
+    failed           int      default 0                 null comment '失败数',
+    imageCount       int      default 0                 null comment '模型生成成功的图片数',
+    submitTime       datetime default CURRENT_TIMESTAMP not null comment '提交时间',
+    endTime          datetime default CURRENT_TIMESTAMP not null comment '完成时间',
+    updateTime       datetime default CURRENT_TIMESTAMP not null on update CURRENT_TIMESTAMP comment '更新时间',
+    -- 索引设计
+    INDEX idx_requestId(requestId),
+    INDEX idx_taskId (taskId),
+    INDEX idx_userId (userId)                       -- 提升按用户查询的性能
+) comment 'AI 扩图任务表' collate = utf8mb4_unicode_ci;

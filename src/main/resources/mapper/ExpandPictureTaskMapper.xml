@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.xhh.yupicturebackend.mapper.ExpandPictureTaskMapper">
+
+    <resultMap id="BaseResultMap" type="com.xhh.yupicturebackend.model.entity.ExpandPictureTask">
+            <id property="id" column="id" />
+            <result property="userId" column="userId" />
+            <result property="requestId" column="requestId" />
+            <result property="taskId" column="taskId" />
+            <result property="taskStatus" column="taskStatus" />
+            <result property="outputPictureUrl" column="outputPictureUrl" />
+            <result property="code" column="code" />
+            <result property="message" column="message" />
+            <result property="total" column="total" />
+            <result property="succeeded" column="succeeded" />
+            <result property="failed" column="failed" />
+            <result property="imageCount" column="imageCount" />
+            <result property="submitTime" column="submitTime" />
+            <result property="endTime" column="endTime" />
+            <result property="updateTime" column="updateTime" />
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id,userId,requestId,taskId,taskStatus,outputPictureUrl,
+        code,message,total,succeeded,failed,
+        imageCount,submitTime,endTime,updateTime
+    </sql>
+</mapper>
