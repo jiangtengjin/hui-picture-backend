@@ -652,13 +652,24 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
      * @return
      */
     @Override
-    public CreateOutPaintingTaskResponse createPictureOutPaintingTask(CreatePictureOutPaintingTaskRequest createPictureOutPaintingTaskRequest, User loginUser) {
+    public CreateOutPaintingTaskResponse createPictureOutPaintingTask(
+            CreatePictureOutPaintingTaskRequest createPictureOutPaintingTaskRequest,
+            User loginUser) {
         // 获取图片信息
         Long pictureId = createPictureOutPaintingTaskRequest.getPictureId();
         Picture picture = Optional.ofNullable(this.getById(pictureId))
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND_ERROR));
-        // 校验权限
-//        checkPictureAuth(loginUser, picture);
+        // 图片大小
+        Long picSize = picture.getPicSize();
+        ThrowUtils.throwIf(picSize == null || picSize > 1024 * 1024 * 10, ErrorCode.PARAMS_ERROR,
+                "图片大小必须小于10M");
+        // 图片单边长度
+        Integer picWidth = picture.getPicWidth();
+        Integer picHeight = picture.getPicHeight();
+        ThrowUtils.throwIf(picWidth == null || picWidth < 512 || picWidth > 4096, ErrorCode.PARAMS_ERROR,
+                "图像单边范围必须在 [512, 4096]");
+        ThrowUtils.throwIf(picHeight == null || picHeight < 512 || picHeight > 4096, ErrorCode.PARAMS_ERROR,
+                "图像单边范围必须在 [512, 4096]");
         // 构造请求参数
         CreateOutPaintingTaskRequest taskRequest = new CreateOutPaintingTaskRequest();
         CreateOutPaintingTaskRequest.Input input = new CreateOutPaintingTaskRequest.Input();

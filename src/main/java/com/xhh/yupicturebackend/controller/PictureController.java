@@ -243,12 +243,6 @@ public class PictureController {
             // 已经引入 so-token 鉴权
             boolean hasPermission = StpKit.SPACE.hasPermission(SpaceUserAuthConstant.PICTURE_VIEW);
             ThrowUtils.throwIf(!hasPermission, ErrorCode.NOT_AUTH_ERROR);
-//            User loginUser = userService.getLoginUser(request);
-//            Space space = spaceService.getById(spaceId);
-//            ThrowUtils.throwIf(space == null, ErrorCode.NOT_FOUND_ERROR, "空间不存在");
-//            if (!loginUser.getId().equals(space.getUserId())) {
-//                throw new BusinessException(ErrorCode.NOT_AUTH_ERROR, "没有空间权限");
-//            }
             pictureQueryRequest.setNullSpaceId(false);
         }
         // 查询数据库
