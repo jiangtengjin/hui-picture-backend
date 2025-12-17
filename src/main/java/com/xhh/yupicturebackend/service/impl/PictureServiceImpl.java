@@ -26,6 +26,7 @@ import com.xhh.yupicturebackend.model.entity.User;
 import com.xhh.yupicturebackend.model.enums.PictureReviewStatusEnum;
 import com.xhh.yupicturebackend.model.vo.PictureVO;
 import com.xhh.yupicturebackend.model.vo.UserVO;
+import com.xhh.yupicturebackend.service.ExpandPictureTaskService;
 import com.xhh.yupicturebackend.service.PictureService;
 import com.xhh.yupicturebackend.service.SpaceService;
 import com.xhh.yupicturebackend.service.UserService;
@@ -77,6 +78,9 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
 
     @Resource
     private ThreadPoolExecutor customExecutor;
+
+    @Resource
+    private ExpandPictureTaskService expandPictureTaskService;
 
     @Resource
     CosManager cosManager;
@@ -677,7 +681,10 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         taskRequest.setInput(input);
         taskRequest.setParameters(createPictureOutPaintingTaskRequest.getParameters());
         // 创建任务
-        return aliYunApi.createTask(taskRequest);
+        CreateOutPaintingTaskResponse task = aliYunApi.createTask(taskRequest);
+        Boolean result = expandPictureTaskService.createTask(task, loginUser);
+        ThrowUtils.throwIf(!result, ErrorCode.SYSTEM_ERROR, "创建任务失败");
+        return task;
     }
 
     /**

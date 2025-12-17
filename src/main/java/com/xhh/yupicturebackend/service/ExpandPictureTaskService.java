@@ -1,7 +1,9 @@
 package com.xhh.yupicturebackend.service;
 
-import com.xhh.yupicturebackend.model.entity.ExpandPictureTask;
 import com.baomidou.mybatisplus.extension.service.IService;
+import com.xhh.yupicturebackend.api.aliyun.model.CreateOutPaintingTaskResponse;
+import com.xhh.yupicturebackend.model.entity.ExpandPictureTask;
+import com.xhh.yupicturebackend.model.entity.User;
 
 /**
 * @author 机hui难得
@@ -9,5 +11,14 @@ import com.baomidou.mybatisplus.extension.service.IService;
 * @createDate 2025-12-15 21:23:07
 */
 public interface ExpandPictureTaskService extends IService<ExpandPictureTask> {
+
+    /**
+     * 添加任务记录
+     *
+     * @param response          阿里云 AI 创建扩图任务响应结果
+     * @param loginUser         当前登录用户
+     * @return
+     */
+    Boolean createTask(CreateOutPaintingTaskResponse response, User loginUser);
 
 }
