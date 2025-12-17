@@ -2,6 +2,7 @@ package com.xhh.yupicturebackend.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.xhh.yupicturebackend.api.aliyun.model.CreateOutPaintingTaskResponse;
+import com.xhh.yupicturebackend.api.aliyun.model.GetOutPaintingTaskResponse;
 import com.xhh.yupicturebackend.model.entity.ExpandPictureTask;
 import com.xhh.yupicturebackend.model.entity.User;
 
@@ -20,5 +21,12 @@ public interface ExpandPictureTaskService extends IService<ExpandPictureTask> {
      * @return
      */
     Boolean createTask(CreateOutPaintingTaskResponse response, User loginUser);
+
+    /**
+     * 更新任务记录
+     *
+     * @param response      AI 扩图任务结果
+     */
+    void updateTask(GetOutPaintingTaskResponse response);
 
 }

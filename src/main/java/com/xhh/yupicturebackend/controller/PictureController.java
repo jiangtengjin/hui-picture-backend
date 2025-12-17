@@ -32,6 +32,7 @@ import com.xhh.yupicturebackend.model.entity.User;
 import com.xhh.yupicturebackend.model.enums.PictureReviewStatusEnum;
 import com.xhh.yupicturebackend.model.vo.PictureTagCategory;
 import com.xhh.yupicturebackend.model.vo.PictureVO;
+import com.xhh.yupicturebackend.service.ExpandPictureTaskService;
 import com.xhh.yupicturebackend.service.PictureService;
 import com.xhh.yupicturebackend.service.SpaceService;
 import com.xhh.yupicturebackend.service.UserService;
@@ -68,6 +69,9 @@ public class PictureController {
 
     @Resource
     private SpaceUserAuthManager spaceUserAuthManager;
+
+    @Resource
+    private ExpandPictureTaskService expandPictureTaskService;
 
     @Resource
     private AliYunApi aliYunApi;
@@ -416,7 +420,10 @@ public class PictureController {
     @GetMapping("/out-painting/get_task")
     public BaseResponse<GetOutPaintingTaskResponse> getPictureOutPaintingTask(String taskId) {
         ThrowUtils.throwIf(StringUtils.isBlank(taskId), ErrorCode.PARAMS_ERROR);
-        return ResultUtils.success(aliYunApi.getOutPaintingTask(taskId));
+        GetOutPaintingTaskResponse task = aliYunApi.getOutPaintingTask(taskId);
+        // 更新扩图任务记录
+        expandPictureTaskService.updateTask(task);
+        return ResultUtils.success(task);
     }
 
 }
