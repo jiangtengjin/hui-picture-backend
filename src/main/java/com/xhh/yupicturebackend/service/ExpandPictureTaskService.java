@@ -1,10 +1,14 @@
 package com.xhh.yupicturebackend.service;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.xhh.yupicturebackend.api.aliyun.model.CreateOutPaintingTaskResponse;
 import com.xhh.yupicturebackend.api.aliyun.model.GetOutPaintingTaskResponse;
+import com.xhh.yupicturebackend.model.dto.TaskQueryRequest;
 import com.xhh.yupicturebackend.model.entity.ExpandPictureTask;
 import com.xhh.yupicturebackend.model.entity.User;
+import com.xhh.yupicturebackend.model.vo.TaskVO;
 
 /**
 * @author 机hui难得
@@ -28,5 +32,21 @@ public interface ExpandPictureTaskService extends IService<ExpandPictureTask> {
      * @param response      AI 扩图任务结果
      */
     void updateTask(GetOutPaintingTaskResponse response);
+
+    /**
+     * 分页获取任务记录
+     *
+     * @param taskQueryRequest
+     * @return
+     */
+    Page<TaskVO> getTaskList(TaskQueryRequest taskQueryRequest);
+
+    /**
+     * 获取 QueryWrapper 对象
+     *
+     * @param taskQueryRequest
+     * @return
+     */
+    QueryWrapper<ExpandPictureTask> getQueryWrapper(TaskQueryRequest taskQueryRequest);
 
 }

@@ -1,7 +1,10 @@
 package com.xhh.yupicturebackend.service.impl;
 
+import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.xhh.yupicturebackend.api.aliyun.model.CreateOutPaintingTaskResponse;
 import com.xhh.yupicturebackend.api.aliyun.model.GetOutPaintingTaskResponse;
@@ -9,9 +12,11 @@ import com.xhh.yupicturebackend.exception.BusinessException;
 import com.xhh.yupicturebackend.exception.ErrorCode;
 import com.xhh.yupicturebackend.exception.ThrowUtils;
 import com.xhh.yupicturebackend.mapper.ExpandPictureTaskMapper;
+import com.xhh.yupicturebackend.model.dto.TaskQueryRequest;
 import com.xhh.yupicturebackend.model.entity.ExpandPictureTask;
 import com.xhh.yupicturebackend.model.entity.User;
 import com.xhh.yupicturebackend.model.enums.TaskStatusEnum;
+import com.xhh.yupicturebackend.model.vo.TaskVO;
 import com.xhh.yupicturebackend.service.ExpandPictureTaskService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -20,6 +25,8 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.Date;
+import java.util.List;
+import java.util.stream.Collectors;
 
 /**
 * @author 机hui难得
@@ -94,6 +101,59 @@ public class ExpandPictureTaskServiceImpl extends ServiceImpl<ExpandPictureTaskM
             task.setOutputPictureUrl(output.getOutputImageUrl());
         }
         this.updateById(task);
+    }
+
+    @Override
+    public Page<TaskVO> getTaskList(TaskQueryRequest taskQueryRequest) {
+        long current = taskQueryRequest.getCurrent();
+        long size = taskQueryRequest.getPageSize();
+        // 限制爬虫
+        ThrowUtils.throwIf(size > 20, ErrorCode.PARAMS_ERROR);
+        // 查询数据库
+        Page<ExpandPictureTask> page = this.page(new Page<>(current, size), this.getQueryWrapper(taskQueryRequest));
+        // 封装返回结果
+        List<ExpandPictureTask> taskList = page.getRecords();
+        Page<TaskVO> taskVOPage = new Page<>(page.getCurrent(), page.getSize(), page.getTotal());
+        if (CollUtil.isEmpty(taskList)) {
+            return taskVOPage;
+        }
+        // 对象列表 => 封装对象列表
+        List<TaskVO> taskVOList = taskList.stream().map(TaskVO::objToVo).collect(Collectors.toList());
+        taskVOPage.setRecords(taskVOList);
+        return taskVOPage;
+    }
+
+    @Override
+    public QueryWrapper<ExpandPictureTask> getQueryWrapper(TaskQueryRequest taskQueryRequest) {
+        QueryWrapper<ExpandPictureTask> queryWrapper = new QueryWrapper<>();
+        if (taskQueryRequest == null) {
+            return queryWrapper;
+        }
+        Long id = taskQueryRequest.getId();
+        Long userId = taskQueryRequest.getUserId();
+        String requestId = taskQueryRequest.getRequestId();
+        String taskId = taskQueryRequest.getTaskId();
+        Integer taskStatus = taskQueryRequest.getTaskStatus();
+        String code = taskQueryRequest.getCode();
+        String message = taskQueryRequest.getMessage();
+        Date submitTime = taskQueryRequest.getSubmitTime();
+        Date endTime = taskQueryRequest.getEndTime();
+        String sortField = taskQueryRequest.getSortField();
+        String sortOrder = taskQueryRequest.getSortOrder();
+        // 拼接查询条件
+        queryWrapper.eq(id != null, "id", id);
+        queryWrapper.eq(userId != null, "userId", userId);
+        queryWrapper.eq(requestId != null, "requestId", requestId);
+        queryWrapper.eq(taskId != null, "taskId", taskId);
+        queryWrapper.eq(taskStatus != null, "taskStatus", taskStatus);
+        queryWrapper.like(StrUtil.isNotBlank(code), "code", code);
+        queryWrapper.like(StrUtil.isNotBlank(message), "message", message);
+        // 时间范围查询，大于等于开始时间，小于结束时间
+        queryWrapper.ge(submitTime != null, "submitTime", submitTime);
+        queryWrapper.lt(endTime != null, "endTime", endTime);
+        // 排序
+        queryWrapper.orderBy(StrUtil.isNotEmpty(sortField), sortOrder.equals("ascend"), sortField);
+        return queryWrapper;
     }
 }
 
