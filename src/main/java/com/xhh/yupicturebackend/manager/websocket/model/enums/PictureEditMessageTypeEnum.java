@@ -11,6 +11,7 @@ public enum PictureEditMessageTypeEnum {
     EXIT_EDIT("退出编辑状态", "EXIT_EDIT"),
     EDIT_ACTION("执行编辑操作", "EDIT_ACTION"),
     HEART_BEAT("心跳检测", "HEART_BEAT"),
+    RECONNECT("断线重连", "RECONNECT"),
     SYNC_REQUEST("同步请求", "SYNC_REQUEST");
 
     private final String text;

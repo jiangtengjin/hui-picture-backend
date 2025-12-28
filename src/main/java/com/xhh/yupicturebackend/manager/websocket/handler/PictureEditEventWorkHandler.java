@@ -43,19 +43,22 @@ public class PictureEditEventWorkHandler implements WorkHandler<PictureEditEvent
         // 调用对应的消息处理方法
         switch (messageTypeEnum) {
             case ENTER_EDIT:
-                pictureEditHandler.handleEnterEditMessage(session, pictureEditRequestMessage, user, pictureId);
+                pictureEditHandler.handleEnterEditMessage(user, pictureId);
                 break;
             case EDIT_ACTION:
                 pictureEditHandler.handleEditActionMessage(session, pictureEditRequestMessage, user, pictureId);
                 break;
             case EXIT_EDIT:
-                pictureEditHandler.handleExitEditMessage(session, pictureEditRequestMessage, user, pictureId);
+                pictureEditHandler.handleExitEditMessage(user, pictureId);
                 break;
             case HEART_BEAT:
                 pictureEditHandler.handleHeartbeatMessage(session);
                 break;
+            case RECONNECT:
+                pictureEditHandler.handleReConnectMessage(session);
+                break;
             case SYNC_REQUEST:
-                pictureEditHandler.handleSyncRequestMessage(session, pictureEditRequestMessage);
+                pictureEditHandler.handleSyncRequestMessage(session);
                 break;
             default:
                 PictureEditResponseMessage pictureEditResponseMessage = new PictureEditResponseMessage();

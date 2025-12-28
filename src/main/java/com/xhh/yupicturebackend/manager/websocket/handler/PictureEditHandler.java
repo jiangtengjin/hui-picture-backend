@@ -61,13 +61,13 @@ public class PictureEditHandler extends TextWebSocketHandler {
 
     // 添加心跳和重连相关字段
     private final Map<String, Long> lastHeartbeatTime = new ConcurrentHashMap<>();
-    private static final long HEARTBEAT_INTERVAL = 30000; // 30 秒超时
+    private static final long HEARTBEAT_INTERVAL = 30000 * 60; // 30 分钟超时
     private final ScheduledExecutorService heartbeatChecker = Executors.newScheduledThreadPool(1);
 
     @PostConstruct
     public void init () {
         // 启动心跳检测
-        heartbeatChecker.scheduleAtFixedRate(this::checkHeartbeats, 30, 30, TimeUnit.SECONDS);
+        heartbeatChecker.scheduleAtFixedRate(this::checkHeartbeats, 30, 30, TimeUnit.MINUTES);
     }
 
     @PreDestroy
@@ -131,9 +131,7 @@ public class PictureEditHandler extends TextWebSocketHandler {
 
         // 如果没有用户进入编辑状态，当前用户自动进入编辑
         if (!pictureEditingUsers.containsKey(pictureId)) {
-            this.handleEnterEditMessage(session,
-                    new PictureEditRequestMessage(),
-                    user, pictureId);
+            this.handleEnterEditMessage(user, pictureId);
         } else {
             // 有人正在编辑，发送加入编辑的事件
             PictureEditResponseMessage pictureEditResponseMessage = new PictureEditResponseMessage();
@@ -206,7 +204,7 @@ public class PictureEditHandler extends TextWebSocketHandler {
         User user = (User) attributes.get("user");
         Long pictureId = (Long) attributes.get("pictureId");
         // 移除当前用户的登录状态
-        handleExitEditMessage(session, null, user, pictureId);
+        handleExitEditMessage(user, pictureId);
 
         // 删除会话
         Set<WebSocketSession> sessionSet = pictureSessions.get(pictureId);
@@ -224,14 +222,10 @@ public class PictureEditHandler extends TextWebSocketHandler {
      * 处理退出编辑的消息
      * 移除当前用户的编辑状态，并通知其他用户
      *
-     * @param session
-     * @param pictureEditRequestMessage
      * @param user
      * @param pictureId
      */
-    public void handleExitEditMessage(WebSocketSession session,
-                                      PictureEditRequestMessage pictureEditRequestMessage,
-                                      User user, Long pictureId) throws Exception {
+    public void handleExitEditMessage(User user, Long pictureId) throws Exception {
         Long editingUserId = pictureEditingUsers.get(pictureId);
         if (editingUserId != null && editingUserId.equals(user.getId())) {
             // 移除当前用户的编辑状态
@@ -283,15 +277,10 @@ public class PictureEditHandler extends TextWebSocketHandler {
      * 处理进入编辑的消息
      * 设置当前用户为编辑用户，并向其他客户端发送消息
      *
-     * @param session
-     * @param pictureEditRequestMessage
      * @param user
      * @param pictureId
      */
-    public void handleEnterEditMessage(WebSocketSession session,
-                                        PictureEditRequestMessage pictureEditRequestMessage,
-                                        User user,
-                                        Long pictureId) throws Exception {
+    public void handleEnterEditMessage(User user, Long pictureId) throws Exception {
         // 没有用户正在编辑图片才能进入编辑
         if (!pictureEditingUsers.containsKey(pictureId)) {
             // 设置当前用户为编辑用户
@@ -326,30 +315,54 @@ public class PictureEditHandler extends TextWebSocketHandler {
     }
 
     /**
+     * 处理用户重连消息
+     *
+     * @param session   session
+     * @return
+     */
+    public void handleReConnectMessage(WebSocketSession session) throws Exception {
+        Map<String, Object> attributes = session.getAttributes();
+        User user = (User) attributes.get("user");
+        PictureEditResponseMessage responseMessage = new PictureEditResponseMessage();
+
+        // 不符合重连资格
+        if (user == null || !lastHeartbeatTime.containsKey(user.getId().toString())) {
+            responseMessage.setType(PictureEditMessageTypeEnum.ERROR.getValue());
+            responseMessage.setMessage("重连失败");
+            sendMessageToSession(session, responseMessage);
+            return;
+        }
+
+        // 允许断线重连
+        responseMessage.setType(PictureEditMessageTypeEnum.RECONNECT.getValue());
+        responseMessage.setMessage(PictureEditMessageTypeEnum.RECONNECT.getText());
+        sendMessageToSession(session, responseMessage);
+    }
+
+    /**
      * 处理同步请求
      *
      * @param session
-     * @param request
      * @throws Exception
      */
-    public void handleSyncRequestMessage(WebSocketSession session, PictureEditRequestMessage request) throws Exception {
+    public void handleSyncRequestMessage(WebSocketSession session) throws Exception {
         Map<String, Object> attributes = session.getAttributes();
         Long pictureId = (Long) attributes.get("pictureId");
         User user = (User) attributes.get("user");
 
         // 构建同步数据
-        PictureEditResponseMessage syncResponse = new PictureEditResponseMessage();
-        syncResponse.setType(PictureEditMessageTypeEnum.SYNC_REQUEST.getValue());
-        syncResponse.setTimestamp(System.currentTimeMillis());
+        PictureEditResponseMessage responseMessage = new PictureEditResponseMessage();
+        responseMessage.setType(PictureEditMessageTypeEnum.SYNC_REQUEST.getValue());
+        responseMessage.setTimestamp(System.currentTimeMillis());
 
         // 同步数据应该包含：
         // 1. 当前编辑状态
         // 2. 最近的操作历史
         // 3. 当前在线用户
         SyncData syncData = buildSyncData(pictureId, user);
-        syncResponse.setData(syncData);
+        responseMessage.setData(syncData);
 
-        sendMessageToSession(session, syncResponse);
+        sendMessageToSession(session, responseMessage);
 
         log.info("向用户 {} 发送同步数据，图片ID: {}", user.getUserName(), pictureId);
     }
